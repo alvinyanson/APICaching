@@ -22,5 +22,15 @@ namespace APICaching.Services
 
             return todos ?? Enumerable.Empty<Todo>();
         }
+
+        public async Task<Todo?> GetOne(int id)
+        {
+
+            var httpResponse = await _httpClient.GetAsync($"todos/{id}?culture={id}");
+
+            var todo = await httpResponse.Content.ReadFromJsonAsync<Todo>();
+
+            return todo;
+        }
     }
 }

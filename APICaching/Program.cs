@@ -10,7 +10,14 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddMemoryCache();
+builder.Services.AddOutputCache(options =>
+{
+    options.AddBasePolicy(builder =>
+        builder.Expire(TimeSpan.FromSeconds(60)));
+    options.AddPolicy("Expire20", builder =>
+        builder.Expire(TimeSpan.FromSeconds(20)));
+    options.AddPolicy("Query", builder => builder.SetVaryByQuery("culture"));
+});
 
 builder.Services.AddHttpClient<ITodoTypeService, TodoTypeService>();
 
@@ -24,6 +31,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseOutputCache();
 
 app.UseAuthorization();
 
