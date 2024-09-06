@@ -1,5 +1,8 @@
-﻿using APICaching.Interface;
+﻿using APICaching.Data;
+using APICaching.Interface;
+using APICaching.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace APICaching.Controllers
 {
@@ -8,48 +11,37 @@ namespace APICaching.Controllers
 
     public class TodosController : ControllerBase
     {
-        private readonly ILogger _logger;
-        private readonly ITodoTypeService _todoTypeService;
+        private readonly ILogger<TodosController> _logger;
+        private readonly ICacheService _cacheService;
+        private readonly AppDbContext _appDbContext;
 
         public TodosController(
             ILogger<TodosController> logger,
-            ITodoTypeService todoTypeService)
+            ICacheService cacheService,
+            AppDbContext appDbContext)
         {
             _logger = logger;
-            _todoTypeService = todoTypeService;
+            _cacheService = cacheService;
+            _appDbContext = appDbContext;
         }
+
 
         [HttpGet]
-        [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any)]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Get()
         {
-            var result = await _todoTypeService.All();
+            // check cache data
+            var cacheData = _cacheService.Get<List<Todo>>("todos");
 
-            _logger.LogInformation("Retrieved todos from api");
+            if (cacheData != null && cacheData.Count > 0)
+            {
+                return Ok(cacheData);
+            }
 
-            return Ok(new { message = "Todos retrieved", time = DateTime.Now, result });
-        }
-
-        [HttpGet("{id:int}")]
-        [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any, VaryByQueryKeys = new string[] { "id" })]
-        public async Task<IActionResult> GetOne(int id)
-        {
-            var result = await _todoTypeService.GetOne(id);
+            cacheData = await _appDbContext.Todos.ToListAsync();
             
-            _logger.LogInformation("Retrieved todo from api");
+            _cacheService.Set<List<Todo>>("todos", cacheData, DateTimeOffset.Now.AddSeconds(30));
 
-            return Ok(new { message = "Todo retrieved", result });
-        }
-
-        [HttpGet("VaryByHeader/{id:int}")]
-        [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any, VaryByHeader = "User-Agent")]
-        public async Task<IActionResult> GetOneVary(int id)
-        {
-            var result = await _todoTypeService.GetOne(id);
-
-            _logger.LogInformation("Retrieved todo from api");
-
-            return Ok(new { message = "Todo retrieved", result });
+            return Ok(cacheData);
         }
     }
 }

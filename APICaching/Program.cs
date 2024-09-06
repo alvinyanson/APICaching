@@ -1,5 +1,7 @@
+using APICaching.Data;
 using APICaching.Interface;
 using APICaching.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +15,13 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddResponseCaching();
 
 builder.Services.AddHttpClient<ITodoTypeService, TodoTypeService>();
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+builder.Services.AddScoped<ICacheService, CacheService>();
 
 var app = builder.Build();
 
