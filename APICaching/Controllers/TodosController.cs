@@ -1,46 +1,55 @@
 ﻿using APICaching.Interface;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OutputCaching;
 
 namespace APICaching.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [OutputCache]
+
     public class TodosController : ControllerBase
     {
+        private readonly ILogger _logger;
         private readonly ITodoTypeService _todoTypeService;
 
-        public TodosController(ITodoTypeService todoTypeService)
+        public TodosController(
+            ILogger<TodosController> logger,
+            ITodoTypeService todoTypeService)
         {
+            _logger = logger;
             _todoTypeService = todoTypeService;
         }
 
         [HttpGet]
+        [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> Index()
         {
             var result = await _todoTypeService.All();
 
-            return Ok(new { message = "Todos retrieved", result });
+            _logger.LogInformation("Retrieved todos from api");
+
+            return Ok(new { message = "Todos retrieved", time = DateTime.Now, result });
         }
 
         [HttpGet("{id:int}")]
-        [OutputCache(PolicyName = "Expire20")]
+        [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any, VaryByQueryKeys = new string[] { "id" })]
         public async Task<IActionResult> GetOne(int id)
         {
             var result = await _todoTypeService.GetOne(id);
+            
+            _logger.LogInformation("Retrieved todo from api");
 
             return Ok(new { message = "Todo retrieved", result });
         }
 
-        // Vary by query string of culture
-        //[HttpGet("{id:int}")]
-        //[OutputCache(PolicyName = "Query")]
-        //public async Task<IActionResult> GetOne(int id)
-        //{
-        //    var result = await _todoTypeService.GetOne(id);
+        [HttpGet("VaryByHeader/{id:int}")]
+        [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any, VaryByHeader = "User-Agent")]
+        public async Task<IActionResult> GetOneVary(int id)
+        {
+            var result = await _todoTypeService.GetOne(id);
 
-        //    return Ok(new { message = "Todo retrieved", result });
-        //}
+            _logger.LogInformation("Retrieved todo from api");
+
+            return Ok(new { message = "Todo retrieved", result });
+        }
     }
 }
