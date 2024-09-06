@@ -27,6 +27,18 @@ app.UseHttpsRedirection();
 
 app.UseResponseCaching();
 
+app.Use(async (context, next) =>
+{
+    context.Response.GetTypedHeaders().CacheControl =
+        new Microsoft.Net.Http.Headers.CacheControlHeaderValue()
+        {
+            Public = true,
+            MaxAge = TimeSpan.FromSeconds(60)
+        };
+
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllers();
